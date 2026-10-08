@@ -205,7 +205,7 @@ function versionOf(raw: unknown): number | null {
   if (raw === undefined || raw === null) return 0;
   if (!isRecord(raw)) return null;
   const v = own(raw, 'version');
-  return Number.isSafeInteger(v) && (v as number) >= 1 ? (v as number) : null;
+  return Number.isSafeInteger(v) && (v as number) >= 0 ? (v as number) : null;
 }
 
 /** Brings any saved blob up to the current version. Never drops data silently. */

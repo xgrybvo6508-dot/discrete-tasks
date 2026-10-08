@@ -197,9 +197,8 @@ describe('pickNext: interleaving', () => {
         }
       });
     }
-    expect(repeats).toBe(-1);
+    expect(repeats).toBe(0);
     expect(picks).toBe(1000);
-    expect(repeats).toBeLessThan(50);
   });
 
   it('brings back missed problems as relearn and due problems as reviews', () => {

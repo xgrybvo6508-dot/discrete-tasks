@@ -24,6 +24,19 @@ export interface ImportError {
   readonly message: string;
 }
 
+export class MemoryExportError extends Error {
+  override readonly name = 'MemoryExportError';
+  readonly userMessage =
+    'Memory could not be exported because some saved data could not be read. Your data was not changed.';
+
+  constructor(options?: { cause?: unknown }) {
+    super(
+      'Memory could not be exported because some saved data could not be read. Your data was not changed.',
+      options,
+    );
+  }
+}
+
 const IMPORT_MESSAGES: Readonly<Record<ImportErrorKind, string>> = {
   'not-json': 'This file could not be read. Choose a file that was made with "Export memory".',
   'wrong-file': 'This file is not a Discrete Tasks memory export.',
@@ -42,13 +55,14 @@ const importError = (kind: ImportErrorKind): ImportError => ({
  */
 export function buildExport(memory: Memory, now: number): MemoryExport {
   const clean = migrate(memory, now);
+  if (!clean.ok) throw new MemoryExportError({ cause: clean.error });
   return {
     app: 'discrete-tasks',
     kind: 'memory-export',
     exportVersion: EXPORT_VERSION,
     memoryVersion: MEMORY_VERSION,
     exportedAt: new Date(now).toISOString(),
-    memory: clean.ok ? clean.value : memory,
+    memory: clean.value,
   };
 }
 
