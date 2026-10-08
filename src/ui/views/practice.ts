@@ -1,7 +1,7 @@
 import { TOPIC_LABELS } from '../../bank/topics';
 import type { Problem } from '../../bank/types';
 import { check, generateProblem, hint, type ActionDeps } from '../../agent/actions';
-import { loadSettings } from '../../agent/settings';
+import { loadSettings, saveSettings } from '../../agent/settings';
 import { checkAnswer } from '../../lib/check';
 import { clear, h } from '../../lib/dom';
 import { newId } from '../../lib/ids';
@@ -34,6 +34,8 @@ export interface PracticeView {
   dispose(): void;
 }
 
+type SourceMode = 'bank' | 'agent';
+
 export function practiceView(runtime: UiRuntime): PracticeView {
   const root = h('div');
   const rng = mulberry32(runtime.clock.now());
@@ -51,17 +53,16 @@ export function practiceView(runtime: UiRuntime): PracticeView {
   let skipConfirm = false;
   let agentText: string | null = null;
   let notice: string | null = runtime.loadNotice;
+  let noticeTone: 'success' | 'warning' | 'quiet' = runtime.loadNotice ? 'warning' : 'quiet';
   let shortcutHelp = false;
   let busy = false;
+  const initialSettings = loadSettings(runtime.settingsStorage);
+  let sourceMode: SourceMode =
+    initialSettings.agentProblems && initialSettings.apiKey.trim() ? 'agent' : 'bank';
   let unbindShortcuts = (): void => undefined;
 
   const problemLookup = (id: string): Problem | undefined =>
     runtime.bankById.get(id) ?? runtime.store.get().aiProblems.find((p) => p.id === id);
-
-  const allProblems = (): readonly Problem[] => [
-    ...runtime.bank,
-    ...runtime.store.get().aiProblems,
-  ];
 
   const agentDeps = (): ActionDeps => ({
     client: runtime.agentClient,
@@ -70,20 +71,23 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     onGenerated: (problem) => runtime.store.update((memory) => addAiProblem(memory, problem)),
   });
 
-  const chooseNext = (): boolean => {
+  const bankTarget = (): { problem: Problem; reason: PickReason } | null => {
     const pick = pickNext({
-      problems: allProblems(),
+      problems: runtime.bank,
       cards: runtime.store.get().cards,
       topics: runtime.store.get().topics,
       session,
       now: runtime.clock.now(),
       rng,
     });
-    if (!pick) return false;
-    const problem = problemLookup(pick.problemId);
-    if (!problem) return false;
+    if (!pick) return null;
+    const problem = runtime.bankById.get(pick.problemId);
+    return problem ? { problem, reason: pick.reason } : null;
+  };
+
+  const setProblem = (problem: Problem, nextReason: PickReason): void => {
     current = problem;
-    reason = pick.reason;
+    reason = nextReason;
     session = presentProblem(session, { problemId: problem.id, topic: problem.topic });
     startedAt = runtime.clock.now();
     hintsUsed = 0;
@@ -95,6 +99,12 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     skipConfirm = false;
     agentText = null;
     timer.reset();
+  };
+
+  const chooseNext = (): boolean => {
+    const target = bankTarget();
+    if (!target) return false;
+    setProblem(target.problem, target.reason);
     return true;
   };
 
@@ -136,12 +146,18 @@ export function practiceView(runtime: UiRuntime): PracticeView {
       if (!skipConfirm) {
         skipConfirm = true;
         notice = 'Press N again to skip this problem.';
+        noticeTone = 'quiet';
         render();
         return;
       }
       record('skipped', 'self');
     }
     notice = null;
+    noticeTone = 'quiet';
+    if (sourceMode === 'agent' && loadSettings(runtime.settingsStorage).apiKey.trim()) {
+      void newAgentProblem();
+      return;
+    }
     if (!chooseNext()) {
       showSummary();
       return;
@@ -155,8 +171,11 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     root.append(
       sessionSummary(session, runtime.store, () => {
         session = createSession(runtime.clock.now(), runtime.focusTopic);
-        chooseNext();
-        render();
+        if (sourceMode === 'agent') void newAgentProblem();
+        else {
+          chooseNext();
+          render();
+        }
       }),
     );
   };
@@ -167,8 +186,12 @@ export function practiceView(runtime: UiRuntime): PracticeView {
       clear(root);
       root.append(
         h('section', { class: 'screen empty-state' }, [
-          h('h1', {}, ['No problem is available']),
-          h('p', { class: 'quiet' }, ['The built-in problem bank is still loading.']),
+          h('h1', {}, [busy ? 'Preparing a problem' : 'No problem is available']),
+          h('p', { class: 'quiet' }, [
+            busy
+              ? 'The agent is working. A built-in problem will be used if it is unavailable.'
+              : 'The built-in problem bank is still loading.',
+          ]),
         ]),
       );
       return;
@@ -177,6 +200,22 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     clear(root);
     const settings = loadSettings(runtime.settingsStorage);
     const agentAvailable = settings.apiKey.trim().length > 0;
+    const source = sourceControl(sourceMode, agentAvailable, busy, (next) => {
+      if (next === sourceMode) return;
+      if (!finished) record('skipped', 'self');
+      sourceMode = next;
+      saveSettings(runtime.settingsStorage, {
+        ...loadSettings(runtime.settingsStorage),
+        agentProblems: next === 'agent',
+      });
+      notice = null;
+      noticeTone = 'quiet';
+      if (next === 'agent') void newAgentProblem();
+      else {
+        chooseNext();
+        render();
+      }
+    });
     const box = answerBox(problem.answer.type);
     box.input.value = answerText;
     box.input.disabled = finished || busy;
@@ -185,33 +224,41 @@ export function practiceView(runtime: UiRuntime): PracticeView {
       skipConfirm = false;
     });
     const feedback = resultPanel();
-    if (notice) feedback.show('quiet', notice);
+    if (notice) feedback.show(noticeTone, notice);
     const hints = hintPanel(
       problem,
       () => {
         if (hintsUsed < problem.hints.length) hintsUsed++;
         render();
       },
+      () => revealSolution(),
       () => void askAgentHint(),
       agentAvailable,
     );
-    hints.render(hintsUsed, agentText, busy);
+    hints.render(hintsUsed, agentText, busy, !finished && !solutionViewed);
 
     const task = h('article', { class: 'task-card', 'data-problem-id': problem.id }, [
       h('div', { class: 'task-meta' }, [
         h('span', { class: 'topic-chip' }, [TOPIC_LABELS[problem.topic]]),
         h('span', { class: 'quiet' }, [`Level ${problem.difficulty}`]),
-        ...(problem.source === 'ai' ? [h('span', { class: 'ai-label' }, ['AI · unverified'])] : []),
+        ...(problem.source === 'ai'
+          ? [h('span', { class: 'ai-label' }, ['Made by the agent. Not verified.'])]
+          : []),
       ]),
       h('h1', {}, [problem.title]),
       richText(problem.statement),
       h('p', { class: 'why-line' }, [whyText(reason, runtime.clock.now())]),
     ]);
 
-    const form = h('form', { class: 'answer-form' }, [box.root]);
+    const form = h('form', { class: 'answer-form', id: 'practice-answer-form' }, [box.root]);
     const primary = h(
       'button',
-      { class: 'button button--primary', type: 'submit', disabled: busy },
+      {
+        class: 'button button--primary',
+        type: 'submit',
+        form: 'practice-answer-form',
+        disabled: busy,
+      },
       [
         finished
           ? 'Next problem'
@@ -220,7 +267,6 @@ export function practiceView(runtime: UiRuntime): PracticeView {
             : 'Check',
       ],
     );
-    form.append(primary);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       answerText = box.input.value;
@@ -241,6 +287,7 @@ export function practiceView(runtime: UiRuntime): PracticeView {
         } else {
           skipConfirm = true;
           notice = 'Choose Skip again to confirm.';
+          noticeTone = 'quiet';
           render();
         }
       });
@@ -250,53 +297,57 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     end.addEventListener('click', showSummary);
     quietActions.append(end);
 
-    if (agentAvailable && !finished) {
-      const generated = h(
-        'button',
-        { class: 'button button--agent', type: 'button', disabled: busy },
-        [busy ? 'Working…' : 'New problem from agent'],
-      );
-      generated.addEventListener('click', () => void newAgentProblem());
-      quietActions.append(generated);
+    const solutionArea = h('div', { class: 'practice-solution' });
+    if (solutionViewed && problem.answer.type !== 'proof') {
+      solutionArea.append(solutionBlock(problem));
     }
-
-    const extra = h('div', { class: 'practice-extra' });
-    if (solutionViewed) extra.append(solutionBlock(problem));
-    if (problem.answer.type === 'proof' && solutionViewed && !finished) {
-      extra.append(
-        proofSolution(problem, (assessment) => {
-          record(
-            assessment === 'got' ? 'correct' : assessment === 'partly' ? 'partial' : 'incorrect',
-            'self',
-            assessment,
-          );
-          render();
-        }),
+    if (problem.answer.type === 'proof' && solutionViewed) {
+      solutionArea.append(
+        proofSolution(
+          problem,
+          (assessment) => {
+            record(
+              assessment === 'got' ? 'correct' : assessment === 'partly' ? 'partial' : 'incorrect',
+              'self',
+              assessment,
+            );
+            render();
+          },
+          !finished,
+        ),
       );
     }
+    const footerExtra = h('div', { class: 'practice-extra' });
     if (finished && loadUiPreferences(runtime.settingsStorage).showTime) {
-      extra.append(
+      footerExtra.append(
         h('p', { class: 'quiet' }, [
           `Active time: ${Math.max(1, Math.round(timer.elapsed() / 60_000))} min.`,
         ]),
       );
     }
-    extra.append(relatedProblems(problem));
+    const related = relatedProblems(problem);
+    if (related) footerExtra.append(related);
     const help = h('p', { class: 'shortcut-help', hidden: !shortcutHelp }, [
-      'Enter check · H hint · N next · Esc close hints · ? help',
+      problem.answer.type === 'proof'
+        ? 'Ctrl or Command + Enter: show solution · H: hint · N: next · Esc: close hints · ?: help'
+        : 'Enter: check · H: hint · N: next · Esc: close hints · ?: help',
     ]);
 
+    const showPrimary = !(problem.answer.type === 'proof' && solutionViewed && !finished);
     root.append(
       h('section', { class: 'screen practice-screen' }, [
+        source,
         task,
         h('p', { class: 'interleave-note' }, [
           'Topics are mixed on purpose. Past mistakes come back at growing intervals.',
         ]),
         form,
         hints.root,
+        ...(showPrimary ? [primary] : []),
         feedback.root,
+        ...(solutionArea.childElementCount > 0 ? [solutionArea] : []),
         quietActions,
-        extra,
+        ...(footerExtra.childElementCount > 0 ? [footerExtra] : []),
         help,
       ]),
     );
@@ -314,9 +365,15 @@ export function practiceView(runtime: UiRuntime): PracticeView {
         shortcutHelp = !shortcutHelp;
         help.hidden = !shortcutHelp;
       },
-      check: () => form.requestSubmit(),
+      check: () => {
+        if (!(problem.answer.type === 'proof' && solutionViewed && !finished)) {
+          form.requestSubmit();
+        }
+      },
     });
-    if (!finished && !busy) queueMicrotask(() => box.input.focus());
+    if (!finished && !busy && !(problem.answer.type === 'proof' && solutionViewed)) {
+      queueMicrotask(() => box.input.focus());
+    }
   };
 
   const checkLocal = (feedback: ReturnType<typeof resultPanel>): void => {
@@ -325,7 +382,9 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     const result = checkAnswer(problem.answer, answerText);
     if (result.status === 'correct') {
       record('correct', 'local');
+      solutionViewed = true;
       notice = result.message;
+      noticeTone = 'success';
       render();
       queueMicrotask(() => root.querySelector<HTMLElement>('.result')?.focus());
     } else {
@@ -342,6 +401,10 @@ export function practiceView(runtime: UiRuntime): PracticeView {
 
   const addWrongAnswerActions = (container: HTMLElement): void => {
     const actions = h('div', { class: 'inline-actions' });
+    const retry = h('button', { class: 'button button--ghost', type: 'button' }, ['Try again']);
+    retry.addEventListener('click', () => {
+      root.querySelector<HTMLInputElement | HTMLTextAreaElement>('#practice-answer')?.focus();
+    });
     const hintButton = h('button', { class: 'button button--ghost', type: 'button' }, ['Hint']);
     hintButton.addEventListener('click', () => {
       if (current && hintsUsed < current.hints.length) hintsUsed++;
@@ -350,12 +413,8 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     const solution = h('button', { class: 'button button--ghost', type: 'button' }, [
       'Show solution',
     ]);
-    solution.addEventListener('click', () => {
-      solutionViewed = true;
-      record('incorrect', 'self');
-      render();
-    });
-    actions.append(hintButton, solution);
+    solution.addEventListener('click', revealSolution);
+    actions.append(retry, hintButton, solution);
     if (loadSettings(runtime.settingsStorage).apiKey) {
       const explain = h('button', { class: 'button button--agent', type: 'button' }, [
         'Explain my mistake',
@@ -366,9 +425,17 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     container.append(actions);
   };
 
-  const showProof = (): void => {
+  const revealSolution = (): void => {
+    const problem = current;
+    if (!problem) return;
     solutionViewed = true;
+    if (problem.answer.type !== 'proof') record('incorrect', 'self');
     render();
+    queueMicrotask(() => root.querySelector<HTMLElement>('.solution')?.focus());
+  };
+
+  const showProof = (): void => {
+    revealSolution();
   };
 
   const askAgentHint = async (): Promise<void> => {
@@ -383,10 +450,15 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     busy = false;
     if (!result.ok) {
       notice = result.error.userMessage;
+      noticeTone = 'warning';
     } else if ('hint' in result.value) {
+      notice = null;
+      noticeTone = 'quiet';
       agentText = result.value.hint;
       if (!result.value.hidden) agentHints++;
     } else if (result.value.source === 'agent') {
+      notice = null;
+      noticeTone = 'quiet';
       agentText = `${result.value.feedback}\n\nNext step: ${result.value.nextStep}`;
       agentHints++;
     }
@@ -394,40 +466,39 @@ export function practiceView(runtime: UiRuntime): PracticeView {
   };
 
   const newAgentProblem = async (): Promise<void> => {
-    const problem = current;
-    if (!problem || busy) return;
+    if (busy) return;
+    const target = bankTarget();
+    if (!target) {
+      showSummary();
+      return;
+    }
     busy = true;
     render();
     const summary = summarizeForAgent(
       runtime.store.get(),
-      problem.topic,
+      target.problem.topic,
       (id) => problemLookup(id)?.title,
     );
-    const result = await generateProblem(agentDeps(), problem.topic, problem.difficulty, summary);
+    const result = await generateProblem(
+      agentDeps(),
+      target.problem.topic,
+      target.problem.difficulty,
+      summary,
+    );
     busy = false;
     if (!result.ok) {
       notice = `${result.error.userMessage} A built-in problem is ready instead.`;
-      if (!chooseNext()) {
-        render();
-        return;
-      }
-    } else {
-      current = result.value.problem;
-      reason = { kind: 'extra' };
-      session = presentProblem(session, {
-        problemId: current.id,
-        topic: current.topic,
+      noticeTone = 'warning';
+      sourceMode = 'bank';
+      saveSettings(runtime.settingsStorage, {
+        ...loadSettings(runtime.settingsStorage),
+        agentProblems: false,
       });
-      startedAt = runtime.clock.now();
-      hintsUsed = 0;
-      agentHints = 0;
-      wrongChecks = 0;
-      solutionViewed = false;
-      finished = false;
-      answerText = '';
-      agentText = null;
-      timer.reset();
+      setProblem(target.problem, target.reason);
+    } else {
+      setProblem(result.value.problem, target.reason);
       notice = result.value.message ?? null;
+      noticeTone = 'quiet';
     }
     render();
   };
@@ -435,16 +506,16 @@ export function practiceView(runtime: UiRuntime): PracticeView {
   const solutionBlock = (problem: Problem): HTMLElement =>
     problem.answer.type === 'proof'
       ? h('div')
-      : h('section', { class: 'solution' }, [
+      : h('section', { class: 'solution', tabindex: '-1' }, [
           h('h3', {}, ['Solution']),
           richText(problem.solution),
         ]);
 
-  const relatedProblems = (problem: Problem): HTMLElement => {
+  const relatedProblems = (problem: Problem): HTMLElement | null => {
     const items = (problem.related ?? [])
       .map((id) => problemLookup(id))
       .filter((item): item is Problem => item !== undefined);
-    if (items.length === 0) return h('div');
+    if (items.length === 0) return null;
     return h('div', { class: 'related' }, [
       h('span', { class: 'quiet' }, ['Connected: ']),
       ...items.map((item) =>
@@ -453,8 +524,12 @@ export function practiceView(runtime: UiRuntime): PracticeView {
     ]);
   };
 
-  chooseNext();
-  render();
+  if (sourceMode === 'agent') {
+    void newAgentProblem();
+  } else {
+    chooseNext();
+    render();
+  }
   return {
     root,
     dispose() {
@@ -462,4 +537,45 @@ export function practiceView(runtime: UiRuntime): PracticeView {
       timer.dispose();
     },
   };
+}
+
+function sourceControl(
+  selected: SourceMode,
+  agentAvailable: boolean,
+  busy: boolean,
+  onSelect: (source: SourceMode) => void,
+): HTMLElement {
+  const bank = h(
+    'button',
+    {
+      class: `source-option${selected === 'bank' ? ' is-selected' : ''}`,
+      type: 'button',
+      'aria-pressed': String(selected === 'bank'),
+      disabled: busy,
+    },
+    ['Bank'],
+  );
+  bank.addEventListener('click', () => onSelect('bank'));
+  const agent = h(
+    'button',
+    {
+      class: `source-option source-option--agent${selected === 'agent' ? ' is-selected' : ''}`,
+      type: 'button',
+      'aria-pressed': String(selected === 'agent'),
+      disabled: busy || !agentAvailable,
+      title: agentAvailable
+        ? 'Generate a problem with your configured provider.'
+        : 'Add a key in Settings first.',
+    },
+    [busy && selected === 'agent' ? 'AI agent · working…' : 'AI agent'],
+  );
+  agent.addEventListener('click', () => onSelect('agent'));
+  return h('div', { class: 'source-control', role: 'group', 'aria-label': 'Problem source' }, [
+    h('span', { class: 'source-control__label' }, ['Source']),
+    bank,
+    agent,
+    ...(!agentAvailable
+      ? [h('a', { class: 'source-control__setup', href: '#/settings' }, ['Set up AI'])]
+      : []),
+  ]);
 }

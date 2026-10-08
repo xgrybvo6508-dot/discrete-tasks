@@ -117,6 +117,9 @@ describe('practiceView', () => {
     expect(view.root.textContent).toContain(
       'Topics are mixed on purpose. Past mistakes come back at growing intervals.',
     );
+    expect(view.root.textContent).toContain('Source');
+    expect(view.root.textContent).toContain('Bank');
+    expect(view.root.textContent).toContain('AI agent');
     expect(view.root.textContent).not.toContain('Ask the agent about my work');
 
     press('h');
@@ -173,6 +176,7 @@ describe('practiceView', () => {
     expect(requireElement<HTMLButtonElement>(view.root, 'button[type="submit"]').textContent).toBe(
       'Next problem',
     );
+    expect(view.root.textContent).toContain('There are four subsets.');
   });
 
   it('requires a second N before skipping and records the skip', () => {

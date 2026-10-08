@@ -28,6 +28,22 @@ h3 {
   margin: 0 0 var(--space-3);
 }
 
+h1 {
+  font-size: var(--text-2xl);
+}
+
+h2 {
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+}
+
+strong {
+  font-weight: 600;
+}
+
 p {
   margin: 0 0 var(--space-4);
   max-width: var(--measure);
@@ -52,7 +68,7 @@ button {
 }
 
 .app {
-  max-width: var(--column);
+  max-width: calc(var(--column) + 2 * var(--space-5));
   margin: 0 auto;
   padding: max(var(--space-5), env(safe-area-inset-top))
     max(var(--space-5), env(safe-area-inset-right)) max(var(--space-5), env(safe-area-inset-bottom))
@@ -92,6 +108,7 @@ button {
 
 @media (min-width: 1024px) {
   .app {
+    max-width: calc(var(--column) + 2 * var(--space-7));
     padding: var(--space-7);
   }
 }

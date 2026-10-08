@@ -18,6 +18,15 @@ function isTyping(target: EventTarget | null): boolean {
 export function bindPracticeShortcuts(handlers: ShortcutHandlers): () => void {
   const listener = (event: KeyboardEvent): void => {
     const typing = isTyping(event.target);
+    if (
+      event.key === 'Enter' &&
+      (event.ctrlKey || event.metaKey) &&
+      event.target instanceof HTMLTextAreaElement
+    ) {
+      event.preventDefault();
+      handlers.check();
+      return;
+    }
     if (event.key === 'Enter' && !typing) {
       event.preventDefault();
       handlers.check();

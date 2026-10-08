@@ -12,15 +12,48 @@
   margin: 0;
 }
 
+.update-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.update-prompt[hidden] {
+  display: none;
+}
+
+.update-prompt > span {
+  min-width: 0;
+}
+
+.update-prompt .text-button {
+  flex: 0 0 auto;
+}
+
 .top-bar__title,
 .nav-link {
   color: var(--text);
   text-decoration: none;
 }
 
+.top-bar__title {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  white-space: nowrap;
+}
+
 .top-bar__nav {
   display: flex;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .nav-link {
@@ -53,6 +86,51 @@
 .task-card {
   display: grid;
   gap: var(--space-4);
+}
+
+.source-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.source-control__label,
+.source-control__setup {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.source-control__setup {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+}
+
+.source-option {
+  min-height: var(--tap);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  padding-inline: var(--space-4);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.source-option.is-selected {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.source-option--agent.is-selected {
+  border-color: var(--purple);
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+
+.source-option--agent:focus-visible {
+  outline-color: var(--purple);
 }
 
 .task-card h1 {
@@ -145,11 +223,42 @@ textarea {
   resize: vertical;
 }
 
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 input[type='checkbox'] {
-  width: var(--space-5);
-  height: var(--space-5);
-  accent-color: var(--green);
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
   flex: 0 0 auto;
+  cursor: pointer;
+}
+
+input[type='checkbox']::before {
+  width: var(--space-3);
+  height: var(--space-2);
+  border-bottom: 2px solid var(--on-accent);
+  border-left: 2px solid var(--on-accent);
+  content: '';
+  transform: rotate(-45deg) scale(0);
+  transition: transform var(--motion);
+}
+
+input[type='checkbox']:checked {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+input[type='checkbox']:checked::before {
+  transform: rotate(-45deg) scale(1);
 }
 
 input[type='file'] {
@@ -209,7 +318,7 @@ input[type='file']::file-selector-button {
   outline-color: var(--purple);
 }
 
-.button:disabled,
+button:disabled,
 input:disabled,
 textarea:disabled {
   cursor: default;
@@ -309,6 +418,7 @@ textarea:disabled {
 
 .input-actions > input {
   flex: 1 1 calc(100% - var(--space-8));
+  min-width: 0;
 }
 
 .solution {
@@ -411,15 +521,17 @@ textarea:disabled {
 }
 
 .topic-node.is-selected rect {
-  stroke: var(--purple);
+  stroke: var(--green);
+  stroke-dasharray: var(--space-2) var(--space-1);
 }
 
 .topic-node:focus {
   outline: none;
 }
 
-.topic-node:focus rect {
+.topic-node:focus-visible rect {
   stroke: var(--green);
+  stroke-width: 6;
 }
 
 .topic-node__label,
@@ -456,10 +568,11 @@ textarea:disabled {
   background: var(--surface);
   padding: var(--space-3);
   text-align: left;
+  cursor: pointer;
 }
 
 .topic-list__item.is-selected {
-  border-color: var(--purple);
+  border-color: var(--green);
 }
 
 .band {
@@ -493,8 +606,8 @@ textarea:disabled {
 }
 
 .focus-label {
-  color: var(--purple);
-  background: var(--purple-soft);
+  color: var(--green);
+  background: var(--green-soft);
   font-size: var(--text-sm);
 }
 
@@ -597,6 +710,15 @@ textarea:disabled {
 }
 
 @media (max-width: 599px) {
+  .top-bar__nav {
+    gap: var(--space-1);
+  }
+
+  .nav-link {
+    padding-inline: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
   .calm-stats,
   .preview-counts {
     grid-template-columns: 1fr;

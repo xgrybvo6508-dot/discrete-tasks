@@ -23,7 +23,7 @@ export function topicMap(
   const map = svg('svg', {
     class: 'topic-map',
     viewBox: '0 0 1000 620',
-    role: 'img',
+    role: 'group',
     'aria-labelledby': 'topic-map-title topic-map-desc',
   });
   const title = svg('title', { id: 'topic-map-title' });
@@ -52,6 +52,7 @@ export function topicMap(
       role: 'button',
       tabindex: '0',
       'aria-label': `${TOPIC_LABELS[topic]}, ${BAND_LABELS[band]}`,
+      'aria-pressed': String(selected === topic),
       transform: `translate(${position.x} ${position.y})`,
     });
     group.append(svg('rect', { x: '-105', y: '-43', width: '210', height: '86', rx: '16' }));
@@ -78,6 +79,7 @@ export function topicMap(
       {
         class: `topic-list__item${selected === topic ? ' is-selected' : ''}`,
         type: 'button',
+        'aria-pressed': String(selected === topic),
       },
       [
         h('span', {}, [TOPIC_LABELS[topic]]),

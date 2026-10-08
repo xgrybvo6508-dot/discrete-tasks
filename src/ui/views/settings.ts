@@ -55,9 +55,16 @@ export function settingsView(runtime: UiRuntime): HTMLElement {
       autocomplete: 'off',
       spellcheck: 'false',
     });
-    const show = h('button', { class: 'button button--ghost', type: 'button' }, [
-      showKey ? 'Hide' : 'Show',
-    ]);
+    const show = h(
+      'button',
+      {
+        class: 'button button--ghost',
+        type: 'button',
+        'aria-controls': 'api-key',
+        'aria-pressed': String(showKey),
+      },
+      [showKey ? 'Hide' : 'Show'],
+    );
     show.addEventListener('click', () => {
       showKey = !showKey;
       render();
@@ -86,6 +93,7 @@ export function settingsView(runtime: UiRuntime): HTMLElement {
       });
       message = 'Settings saved.';
       messageTone = 'quiet';
+      render();
     };
     for (const input of [baseUrl, model, key]) input.addEventListener('change', saveFields);
 
@@ -134,7 +142,7 @@ export function settingsView(runtime: UiRuntime): HTMLElement {
         h('div', { class: 'field' }, [
           h('label', { for: 'api-key' }, ['API key']),
           h('div', { class: 'input-actions' }, [key, show, clearKey]),
-          h('p', { class: 'field-help' }, [
+          h('p', { class: 'field-help', id: 'api-key-help' }, [
             settings.apiKey
               ? `Saved as ${maskKey(settings.apiKey)}. It stays in this browser.`
               : 'The key stays in this browser and is sent only to your provider.',
@@ -158,6 +166,7 @@ export function settingsView(runtime: UiRuntime): HTMLElement {
       ]),
       h('a', { class: 'quiet-link', href: '#/data' }, ['Your data']),
     );
+    key.setAttribute('aria-describedby', 'api-key-help');
   };
 
   const runTest = async (
@@ -197,16 +206,23 @@ export function settingsView(runtime: UiRuntime): HTMLElement {
 
 function field(label: string, input: HTMLElement, help: string): HTMLElement {
   const id = input.id;
+  const helpId = `${id}-help`;
+  input.setAttribute('aria-describedby', helpId);
   return h('div', { class: 'field' }, [
     h('label', { for: id }, [label]),
     input,
-    h('p', { class: 'field-help' }, [help]),
+    h('p', { class: 'field-help', id: helpId }, [help]),
   ]);
 }
 
 function toggleField(input: HTMLInputElement, label: string, help: string): HTMLElement {
+  const helpId = `${input.id}-help`;
+  input.setAttribute('aria-describedby', helpId);
   return h('div', { class: 'toggle-field' }, [
-    h('div', {}, [h('label', { for: input.id }, [label]), h('p', { class: 'field-help' }, [help])]),
+    h('div', {}, [
+      h('label', { for: input.id }, [label]),
+      h('p', { class: 'field-help', id: helpId }, [help]),
+    ]),
     input,
   ]);
 }

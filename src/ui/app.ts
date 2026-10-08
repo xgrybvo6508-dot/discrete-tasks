@@ -1,5 +1,6 @@
 import { clear, h } from '../lib/dom';
 import { topBar } from './components/top-bar';
+import { updatePrompt } from './components/update-prompt';
 import type { UiRuntime } from './runtime';
 import { dataView } from './views/data';
 import { practiceView, type PracticeView } from './views/practice';
@@ -22,7 +23,7 @@ export function currentRoute(hash: string): Route {
 export function mountApp(container: HTMLElement, runtime: UiRuntime): App {
   const bar = topBar();
   const main = h('main', { class: 'main', id: 'main' });
-  const root = h('div', { class: 'app' }, [bar, main]);
+  const root = h('div', { class: 'app' }, [bar, updatePrompt(), main]);
   let practice: PracticeView | null = null;
 
   const render = (): void => {

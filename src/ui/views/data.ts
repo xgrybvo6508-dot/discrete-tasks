@@ -8,7 +8,7 @@ import {
   serializeExport,
 } from '../../memory/export';
 import { CORRUPT_PREFIX } from '../../memory/store';
-import type { Memory } from '../../memory/schema';
+import { emptyMemory, type Memory } from '../../memory/schema';
 import type { UiRuntime } from '../runtime';
 
 export function dataView(runtime: UiRuntime): HTMLElement {
@@ -17,6 +17,7 @@ export function dataView(runtime: UiRuntime): HTMLElement {
   let fileName = '';
   let message = '';
   let busy = false;
+  let resetConfirm = false;
   let hasCorruptCopy = runtime.loadNotice !== null;
 
   const render = (): void => {
@@ -61,6 +62,7 @@ export function dataView(runtime: UiRuntime): HTMLElement {
         h('p', { class: 'field-help' }, [lastExport]),
       ]),
       h('section', { class: 'data-section' }, [h('h2', {}, ['Import']), importArea]),
+      resetSection(),
     );
     if (incoming) root.append(importPreview(memory, incoming));
     if (hasCorruptCopy) {
@@ -162,6 +164,76 @@ export function dataView(runtime: UiRuntime): HTMLElement {
     } else {
       message = result.error.userMessage;
     }
+    render();
+  };
+
+  const resetSection = (): HTMLElement => {
+    const reset = h(
+      'button',
+      {
+        class: 'button button--outline',
+        id: resetConfirm ? 'confirm-reset' : 'start-reset',
+        type: 'button',
+        disabled: busy,
+        'aria-describedby': resetConfirm ? 'reset-help reset-confirmation' : 'reset-help',
+      },
+      [resetConfirm ? 'Confirm reset' : 'Reset practice memory'],
+    );
+    reset.addEventListener('click', () => {
+      if (!resetConfirm) {
+        resetConfirm = true;
+        message = '';
+        render();
+        queueMicrotask(() => root.querySelector<HTMLElement>('#confirm-reset')?.focus());
+        return;
+      }
+      void resetMemory();
+    });
+    const actions = h('div', { class: 'inline-actions' }, [reset]);
+    if (resetConfirm) {
+      const cancel = h(
+        'button',
+        { class: 'button button--ghost', type: 'button', disabled: busy },
+        ['Cancel'],
+      );
+      cancel.addEventListener('click', () => {
+        resetConfirm = false;
+        render();
+        queueMicrotask(() => root.querySelector<HTMLElement>('#start-reset')?.focus());
+      });
+      actions.append(cancel);
+    }
+    return h('section', { class: 'data-section' }, [
+      h('h2', {}, ['Reset']),
+      h('p', { class: 'quiet', id: 'reset-help' }, [
+        'Erase attempts, progress and saved AI problems. Provider settings are not changed.',
+      ]),
+      ...(resetConfirm
+        ? [
+            h('p', { class: 'notice notice--warning', id: 'reset-confirmation' }, [
+              'This cannot be undone from the app. A backup copy will be kept on this device.',
+            ]),
+          ]
+        : []),
+      actions,
+    ]);
+  };
+
+  const resetMemory = async (): Promise<void> => {
+    busy = true;
+    render();
+    const backup = await runtime.store.backup();
+    if (!backup.ok) {
+      busy = false;
+      message = backup.error.userMessage;
+      render();
+      return;
+    }
+    runtime.store.replace(emptyMemory(runtime.clock.now()));
+    const saved = await runtime.store.flush();
+    busy = false;
+    resetConfirm = false;
+    message = saved.ok ? 'Practice memory reset.' : saved.error.userMessage;
     render();
   };
 

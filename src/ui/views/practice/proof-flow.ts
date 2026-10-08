@@ -6,6 +6,7 @@ import { richText } from '../../components/rich-text';
 export function proofSolution(
   problem: Problem,
   onAssess: (value: SelfAssessment) => void,
+  showAssessment = true,
 ): HTMLElement {
   const checklist = h('ul', { class: 'key-points' });
   for (const point of problem.answer.keyPoints ?? []) checklist.append(h('li', {}, [point]));
@@ -20,11 +21,12 @@ export function proofSolution(
     button.addEventListener('click', () => onAssess(value));
     actions.append(button);
   }
-  return h('section', { class: 'solution' }, [
+  return h('section', { class: 'solution', tabindex: '-1' }, [
     h('h3', {}, ['Model solution']),
     richText(problem.solution),
     ...(checklist.childElementCount > 0 ? [h('h3', {}, ['Key points']), checklist] : []),
-    h('p', { class: 'quiet' }, ['How did this compare with your proof?']),
-    actions,
+    ...(showAssessment
+      ? [h('p', { class: 'quiet' }, ['How did this compare with your proof?']), actions]
+      : []),
   ]);
 }

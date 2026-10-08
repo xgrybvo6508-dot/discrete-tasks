@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Discrete Tasks">
+  <rect width="512" height="512" rx="112" fill="#0e0f13"/>
+  <path d="M126 162h122c76 0 138 62 138 138v50" fill="none" stroke="#3ddc97" stroke-width="44" stroke-linecap="round"/>
+  <circle cx="126" cy="162" r="42" fill="#a78bfa"/>
+  <circle cx="386" cy="350" r="42" fill="#3ddc97"/>
+  <path d="M164 350h112" fill="none" stroke="#a78bfa" stroke-width="44" stroke-linecap="round"/>
+</svg>

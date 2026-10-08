@@ -1,4 +1,5 @@
 import type { Plugin } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 // connect-src allows any https: origin because the agent API origin is chosen by the
@@ -37,7 +38,57 @@ function cspPlugin(): Plugin {
 
 export default defineConfig({
   base: '/discrete-tasks/',
-  plugins: [cspPlugin()],
+  plugins: [
+    cspPlugin(),
+    VitePWA({
+      registerType: 'prompt',
+      injectRegister: false,
+      includeAssets: [
+        'icons/icon.svg',
+        'icons/favicon.ico',
+        'icons/pwa-64x64.png',
+        'icons/pwa-192x192.png',
+        'icons/pwa-512x512.png',
+        'icons/maskable-icon-512x512.png',
+        'icons/apple-touch-icon-180x180.png',
+      ],
+      manifest: {
+        name: 'Discrete Tasks',
+        short_name: 'Discrete',
+        description: 'Calm, offline discrete-math practice.',
+        start_url: '/discrete-tasks/',
+        scope: '/discrete-tasks/',
+        display: 'standalone',
+        background_color: '#0e0f13',
+        theme_color: '#0e0f13',
+        icons: [
+          {
+            src: 'icons/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'icons/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: 'icons/maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+        navigateFallback: 'index.html',
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
+  ],
   build: {
     target: 'es2022',
     sourcemap: false,

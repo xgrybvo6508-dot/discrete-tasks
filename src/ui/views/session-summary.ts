@@ -24,8 +24,8 @@ export function sessionSummary(
   const button = h('button', { class: 'button button--primary', type: 'button' }, ['Start again']);
   button.addEventListener('click', onRestart);
   return h('section', { class: 'screen session-summary' }, [
-    h('p', { class: 'eyebrow' }, ['Session complete']),
-    h('h1', {}, ['A quiet stopping point']),
+    h('p', { class: 'eyebrow' }, ['Session ended']),
+    h('h1', {}, ['Session summary']),
     h('p', {}, [
       `You saw ${summary.seen} ${summary.seen === 1 ? 'problem' : 'problems'} across ${summary.topics.length} ${summary.topics.length === 1 ? 'topic' : 'topics'}.`,
     ]),
