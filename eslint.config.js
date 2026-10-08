@@ -13,6 +13,7 @@ export default tseslint.config(
       'dev-dist/',
       'test-results/',
       'playwright-report/',
+      '.cursor-runs/',
     ],
   },
   js.configs.recommended,

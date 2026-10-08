@@ -3,7 +3,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentClient } from '../../agent/client';
 import { AgentError } from '../../agent/errors';
-import type { SettingsStorage } from '../../agent/settings';
+import {
+  DEFAULT_SETTINGS,
+  loadSettings,
+  saveSettings,
+  type SettingsStorage,
+} from '../../agent/settings';
 import type { Problem } from '../../bank/types';
 import { err, ok } from '../../lib/result';
 import { emptyMemory, type Memory } from '../../memory/schema';
@@ -26,9 +31,23 @@ const PROBLEM: Problem = {
   estMinutes: 5,
 };
 
+const PROOF_PROBLEM: Problem = {
+  ...PROBLEM,
+  id: 'test-proof-001',
+  title: 'Prove a small claim',
+  statement: 'Prove that the sum of two even integers is even.',
+  solution: 'Write the integers as $2a$ and $2b$. Their sum is $2(a+b)$.',
+  answer: {
+    type: 'proof',
+    display: 'A proof using the definition of even.',
+    keyPoints: ['Represent both integers as multiples of two.', 'Factor two from the sum.'],
+  },
+};
+
 interface RuntimeFixture {
   readonly runtime: UiRuntime;
   readonly memory: () => Memory;
+  readonly settingsStorage: SettingsStorage;
 }
 
 function runtimeFixture(problem: Problem = PROBLEM): RuntimeFixture {
@@ -80,6 +99,7 @@ function runtimeFixture(problem: Problem = PROBLEM): RuntimeFixture {
       loadNotice: null,
     },
     memory: () => memory,
+    settingsStorage,
   };
 }
 
@@ -196,5 +216,69 @@ describe('practiceView', () => {
       checkedBy: 'self',
     });
     expect(view.root.querySelector('h1')?.textContent).toBe(PROBLEM.title);
+  });
+
+  it('records proof self-assessment after showing the model solution', () => {
+    const fixture = runtimeFixture(PROOF_PROBLEM);
+    view = practiceView(fixture.runtime);
+    document.body.append(view.root);
+    const input = requireElement<HTMLTextAreaElement>(view.root, '#practice-answer');
+    input.value = 'Let the integers be 2a and 2b.';
+    requireElement<HTMLFormElement>(view.root, 'form').dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    );
+
+    expect(view.root.textContent).toContain('Model solution');
+    expect(fixture.memory().attempts).toHaveLength(0);
+    const partly = [...view.root.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === 'Partly',
+    );
+    if (!partly) throw new Error('Missing Partly self-assessment');
+    partly.click();
+
+    expect(fixture.memory().attempts).toHaveLength(1);
+    expect(fixture.memory().attempts[0]).toMatchObject({
+      problemId: PROOF_PROBLEM.id,
+      source: 'bank',
+      answerText: 'Let the integers be 2a and 2b.',
+      solutionViewed: true,
+      outcome: 'partial',
+      selfAssessment: 'partly',
+      checkedBy: 'self',
+    });
+    expect(view.root.textContent).not.toContain('How did this compare with your proof?');
+  });
+
+  it('falls back to the bank and records the bank source when agent generation fails', async () => {
+    const fixture = runtimeFixture();
+    saveSettings(fixture.settingsStorage, {
+      ...DEFAULT_SETTINGS,
+      apiKey: 'test-placeholder',
+      agentProblems: true,
+    });
+
+    view = practiceView(fixture.runtime);
+    document.body.append(view.root);
+    await vi.waitFor(() => expect(view?.root.querySelector('h1')?.textContent).toBe(PROBLEM.title));
+
+    expect(view.root.textContent).toContain('A built-in problem is ready instead.');
+    expect(loadSettings(fixture.settingsStorage).agentProblems).toBe(false);
+    const bank = [...view.root.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === 'Bank',
+    );
+    expect(bank?.getAttribute('aria-pressed')).toBe('true');
+
+    const input = requireElement<HTMLInputElement>(view.root, '#practice-answer');
+    input.value = '4';
+    requireElement<HTMLFormElement>(view.root, 'form').dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    );
+
+    expect(fixture.memory().attempts[0]).toMatchObject({
+      problemId: PROBLEM.id,
+      source: 'bank',
+      outcome: 'correct',
+      checkedBy: 'local',
+    });
   });
 });

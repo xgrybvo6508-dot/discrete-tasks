@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { BANK } from '../src/bank';
 import type { Problem } from '../src/bank/types';
 
@@ -61,4 +62,34 @@ test('bank practice, hints, settings and memory work without network calls', asy
   await page.locator('#model').dispatchEvent('change');
   await page.reload();
   await expect(page.locator('#model')).toHaveValue('offline-model');
+
+  await page.getByRole('link', { name: 'Your data' }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export memory' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^discrete-tasks-memory-\d{4}-\d{2}-\d{2}\.json$/);
+  const downloadPath = await download.path();
+  if (!downloadPath) throw new Error('The memory export did not produce a local file');
+  const exported = await readFile(downloadPath, 'utf8');
+  expect(exported).toContain('"kind": "memory-export"');
+  expect(exported).not.toContain('offline-model');
+  expect(exported).not.toContain('apiKey');
+
+  await page.getByRole('button', { name: 'Reset practice memory' }).click();
+  await page.getByRole('button', { name: 'Confirm reset' }).click();
+  await expect(page.getByText('Practice memory reset.')).toBeVisible();
+  await page.getByRole('link', { name: 'Progress' }).click();
+  await expect(page.getByText('Problems solved').locator('..').locator('dd')).toHaveText('0');
+
+  await page.goto('./#/data');
+  await page.locator('#memory-file').setInputFiles({
+    name: 'memory.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(exported),
+  });
+  await expect(page.getByRole('heading', { name: 'Ready to import' })).toBeVisible();
+  await page.getByRole('button', { name: 'Merge', exact: true }).click();
+  await expect(page.getByText('Memory merged.')).toBeVisible();
+  await page.getByRole('link', { name: 'Progress' }).click();
+  await expect(page.getByText('Problems solved').locator('..').locator('dd')).toHaveText('1');
 });

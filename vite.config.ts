@@ -3,7 +3,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 // connect-src allows any https: origin because the agent API origin is chosen by the
-// user at runtime in Settings. style-src-attr needs 'unsafe-inline' for KaTeX output.
+// user at runtime in Settings. Localhost HTTP is allowed for local OpenAI-compatible
+// servers. style-src-attr needs 'unsafe-inline' for KaTeX output.
 export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
@@ -11,7 +12,7 @@ export const CSP = [
   "style-src-attr 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data:",
-  "connect-src 'self' https:",
+  "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
   "manifest-src 'self'",
   "worker-src 'self'",
   "object-src 'none'",

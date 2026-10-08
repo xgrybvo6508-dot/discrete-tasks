@@ -6,7 +6,7 @@
       The Content-Security-Policy <meta> is added at build time by the CSP plugin in
       vite.config.ts (the dev server needs inline styles, so it is build-only).
       connect-src allows https: because the agent API origin is chosen by the user in
-      Settings at runtime. No other third-party origin is ever allowed.
+      Settings at runtime. HTTP is limited to localhost for local providers.
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />

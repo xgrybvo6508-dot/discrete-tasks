@@ -15,8 +15,10 @@ import { createSession, presentProblem } from '../../memory/session';
 import { emptyMemory, type Memory } from '../../memory/schema';
 import type { MemoryStore } from '../../memory/store';
 import type { KeyValueStore } from '../../memory/storage/adapter';
+import { makeAttempt } from '../../memory/testing';
 import { loadUiPreferences } from '../preferences';
 import type { UiRuntime } from '../runtime';
+import { dataView } from './data';
 import { progressView } from './progress';
 import { sessionSummary } from './session-summary';
 import { settingsView } from './settings';
@@ -133,7 +135,7 @@ describe('settingsView', () => {
 
     expect(requireElement<HTMLInputElement>(root, '#api-key').type).toBe('password');
     expect(root.textContent).toContain('Saved as sk-…1234.');
-    buttonWithText(root, 'Clear key').click();
+    buttonWithText(root, 'Forget key').click();
 
     expect(loadSettings(fixture.settingsStorage).apiKey).toBe('');
     expect(root.textContent).toContain('API key cleared.');
@@ -181,6 +183,34 @@ describe('progressView', () => {
     expect(fixture.runtime.focusTopic).toBe('combinatorics');
     expect(loadUiPreferences(fixture.settingsStorage).focusTopic).toBe('combinatorics');
     expect(window.location.hash).toBe('#/practice');
+  });
+});
+
+describe('dataView', () => {
+  it('requires confirmation, resets only practice memory, and keeps provider settings', async () => {
+    const fixture = runtimeFixture();
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      model: 'local-test-model',
+      apiKey: 'test-placeholder',
+    };
+    saveSettings(fixture.settingsStorage, settings);
+    fixture.runtime.store.replace({
+      ...emptyMemory(NOW),
+      attempts: [makeAttempt({ id: 'attempt-to-reset' })],
+    });
+    const root = dataView(fixture.runtime);
+    document.body.append(root);
+
+    buttonWithText(root, 'Reset practice memory').click();
+    expect(fixture.runtime.store.get().attempts).toHaveLength(1);
+    expect(root.textContent).toContain('This cannot be undone from the app.');
+
+    buttonWithText(root, 'Confirm reset').click();
+    await vi.waitFor(() => expect(root.textContent).toContain('Practice memory reset.'));
+
+    expect(fixture.runtime.store.get().attempts).toEqual([]);
+    expect(loadSettings(fixture.settingsStorage)).toEqual(settings);
   });
 });
 

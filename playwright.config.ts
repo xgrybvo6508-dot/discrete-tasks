@@ -8,9 +8,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173/discrete-tasks/',
     trace: 'retain-on-failure',
-    launchOptions: {
-      executablePath: '/usr/bin/google-chrome',
-    },
+    channel: 'chrome',
     ...devices['Desktop Chrome'],
   },
   webServer: {

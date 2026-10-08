@@ -5,8 +5,17 @@ test('reloads a bank problem offline after the service worker is installed', asy
   page,
 }) => {
   await page.goto('./');
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
+  const paths = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    return {
+      manifest: manifest ? new URL(manifest.href).pathname : null,
+      scope: new URL(registration.scope).pathname,
+    };
+  });
+  expect(paths).toEqual({
+    manifest: '/discrete-tasks/manifest.webmanifest',
+    scope: '/discrete-tasks/',
   });
   if (!(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)))) {
     await page.reload();

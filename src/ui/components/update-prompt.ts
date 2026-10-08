@@ -1,7 +1,12 @@
 import { registerSW } from 'virtual:pwa-register';
+import type { RegisterSWOptions } from 'vite-plugin-pwa/types';
 import { h } from '../../lib/dom';
 
-export function updatePrompt(): HTMLElement {
+export type ServiceWorkerRegistrar = (
+  options?: RegisterSWOptions,
+) => (reloadPage?: boolean) => Promise<void>;
+
+export function updatePrompt(register: ServiceWorkerRegistrar = registerSW): HTMLElement {
   const message = h('span', { role: 'status', 'aria-live': 'polite' });
   const action = h('button', { class: 'text-button', type: 'button' });
   const root = h(
@@ -14,7 +19,7 @@ export function updatePrompt(): HTMLElement {
   );
   let actionMode: 'refresh' | 'dismiss' = 'dismiss';
 
-  const update = registerSW({
+  const update = register({
     immediate: true,
     onNeedRefresh() {
       message.textContent = 'A new version is ready. Reload when you want.';

@@ -70,7 +70,7 @@ export function settingsView(runtime: UiRuntime): HTMLElement {
       render();
       queueMicrotask(() => root.querySelector<HTMLInputElement>('#api-key')?.focus());
     });
-    const clearKey = h('button', { class: 'button button--ghost', type: 'button' }, ['Clear key']);
+    const clearKey = h('button', { class: 'button button--ghost', type: 'button' }, ['Forget key']);
     clearKey.disabled = settings.apiKey.length === 0;
     clearKey.addEventListener('click', () => {
       settings = clearApiKey(runtime.settingsStorage, settings);

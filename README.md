@@ -28,7 +28,7 @@ The production build uses the GitHub Pages base path `/discrete-tasks/`. `vite-p
 
 Practice memory and settings stay on the device. There is no telemetry. If an API key is added in Settings, it is stored only in localStorage and is sent only to the provider URL chosen by the user. Memory exports never contain settings or API keys.
 
-The Content Security Policy permits `connect-src https:` because the provider origin is chosen at runtime. No third-party scripts, fonts, or trackers are loaded.
+The Content Security Policy permits `connect-src https:` because the provider origin is chosen at runtime. HTTP connections are limited to localhost for local providers. No third-party scripts, fonts, or trackers are loaded.
 
 ## Cursor tooling
 
