@@ -1,0 +1,52 @@
+---
+description: Stack, folder layout, TypeScript strictness, testing and npm scripts for Discrete Tasks
+globs:
+alwaysApply: true
+---
+
+# Project conventions
+
+## Stack
+- **Vite + vanilla TypeScript.** No React/Vue/Svelte/Angular and no heavy UI kits. Small DOM helpers in `src/lib` are fine.
+- **KaTeX** for math (`$...$` inline, `$$...$$` display). Bundle it locally so the app works offline. No CDN.
+- **PWA**: manifest + service worker (`vite-plugin-pwa`). The app must fully work offline with the built-in bank.
+- **Static only**: deployed to GitHub Pages (repo `xgrybvo6508-dot/discrete-tasks`). Vite `base: '/discrete-tasks/'`. Every asset URL, manifest `start_url`/`scope` and SW scope must respect this base. Use `import.meta.env.BASE_URL`, not hard-coded `/`.
+- Tooling: `vitest`, `eslint` (typescript-eslint), `prettier`, `tsx` for scripts.
+
+## Folder layout
+```
+src/
+  main.ts          # bootstrap only
+  agent/           # OpenAI-compatible client, prompts, strict JSON parsing/validation
+  memory/          # persistence (localStorage, versioned), spaced repetition, interleaving, stats
+  bank/            # Problem types + built-in offline problems (~30)
+  ui/              # views, components, CSS (see 30-design-system.mdc)
+  lib/             # pure helpers: answer checking, KaTeX render, markdown, ids, time
+scripts/verify/    # brute-force verification scripts for bank answers
+```
+Tests are colocated as `*.test.ts` next to the module.
+
+## Code style
+- `tsconfig`: `"strict": true`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`. No `any`. Use `unknown` + type guards at boundaries (API responses, localStorage).
+- **Small pure modules.** Logic in `agent/`, `memory/`, `lib/` is pure and DOM-free so it can be unit-tested. Side effects (fetch, storage, DOM) sit behind thin adapters that get injected.
+- ES modules and named exports. One responsibility per file, roughly under 200 lines.
+- Persisted data has a `version` field and a migration function. Never silently drop user memory.
+- Errors are typed (`Result`-style or custom `Error` subclasses) and reach the UI as calm, plain-English messages.
+
+## Testing
+- vitest covers every piece of logic: spaced repetition scheduling, interleaving picker, answer checking (numeric/expression/set), agent JSON parsing/validation, storage migrations.
+- Use a fake clock and fake storage. No real network in tests.
+
+## npm scripts (keep these names)
+| script | command |
+|---|---|
+| `dev` | `vite` |
+| `build` | `tsc --noEmit && vite build` |
+| `preview` | `vite preview` |
+| `test` | `vitest run` |
+| `lint` | `eslint .` |
+| `typecheck` | `tsc --noEmit` |
+| `verify` | `tsx scripts/verify/run-all.ts` |
+| `format` | `prettier --write .` |
+
+Before declaring work done, run: `npm run typecheck && npm run lint && npm test && npm run build`.

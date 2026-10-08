@@ -1,0 +1,51 @@
+---
+description: Dark, calm, minimalist green/purple design system; accessibility and ADHD-friendly layout rules
+globs: src/ui/**, src/**/*.css, index.html
+alwaysApply: false
+---
+
+# Design system
+
+## Tokens (define once in `src/ui/tokens.css` as CSS custom properties; never hard-code colors elsewhere)
+```css
+:root {
+  color-scheme: dark;
+  --bg: #0e0f13;          --surface: #161820;    --surface-2: #1d2029;
+  --border: #2a2e3a;      --text: #e7e9ee;       --muted: #9aa0ad;
+  --green: #3ddc97;       --green-soft: rgb(61 220 151 / 0.12);   /* primary, success, progress */
+  --purple: #a78bfa;      --purple-soft: rgb(167 139 250 / 0.12); /* agent, hints, AI content */
+  --warn: #f5b971;        /* "not quite" — calm amber, never alarm red */
+  --on-accent: #0e0f13;   /* text on green/purple fills */
+  --radius: 12px; --radius-lg: 16px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+```
+- **Green** = primary action ("Check", "Next") and success. **Purple** = anything from the agent (hints, explanations, generated problems). Never mix the two meanings.
+- At most one filled accent button per screen. Everything else is ghost or outline.
+
+## Typography
+- Base 17px, line-height 1.6, max text width `68ch`. Scale: 14 / 17 / 20 / 26 / 32px.
+- Weights 400 and 600 only. Sentence case, no ALL CAPS paragraphs. KaTeX at `1.05em`, display math scrolls horizontally on small screens.
+- Fonts are system or self-hosted. No external font requests (offline + privacy).
+
+## Layout: one task in focus
+- A single centered column, `max-width: 720px`, generous padding (`--space-5` on mobile, `--space-7` on desktop).
+- Order: minimal top bar (title, settings icon) → **task card** → answer area → hint panel (purple, collapsible) → one primary button. No sidebars on the solving screen.
+- Progress and memory stats live on a separate, quiet screen. They never compete with the task.
+
+## Motion
+- Only `opacity`/`transform`, 150–200ms, `ease-out`. No looping, blinking, shaking, parallax, or confetti.
+- `@media (prefers-reduced-motion: reduce)` → disable transitions and animations.
+
+## Accessibility
+- WCAG **AA** contrast at minimum (body text ≥ 4.5:1, large text/UI ≥ 3:1). Check `--muted` on `--surface-2`.
+- Visible focus ring everywhere: `outline: 2px solid var(--green); outline-offset: 2px` (purple inside agent panels). Never `outline: none` without a replacement.
+- Fully keyboard operable: Enter = check, `H` = next hint, `N` = next problem (shown in a small help line). Semantic HTML, labelled inputs, `aria-live="polite"` for feedback.
+- Touch targets ≥ 44×44px.
+
+## Responsive
+- Mobile first. Breakpoints: `600px` (tablet/iPad) and `1024px` (desktop). Test at 375px, 768px/1024px (iPad, both orientations) and 1440px.
+- Respect `env(safe-area-inset-*)` for the installed iOS PWA. Inputs ≥ 16px font so iOS doesn't zoom.

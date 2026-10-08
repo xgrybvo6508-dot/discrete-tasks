@@ -1,0 +1,26 @@
+---
+description: Who the owner/user is and how that shapes every product and UX decision
+globs:
+alwaysApply: true
+---
+
+# User context: build for Vladislav
+
+**Discrete Tasks** is a personal study tool. Its owner and main user is Vladislav: 18, a university student, on the autism spectrum, with ADHD, and twice-exceptional (2e). He is very capable, and he learns best through **mind maps** and **interleaving**. He loves minimalism. He speaks Russian, but **all UI text must be in English**. Keep the English simple and literal, with no idioms.
+
+## What this means for product decisions
+
+- **One task in focus.** Each screen has one primary action. Secondary actions stay quiet or are hidden until needed. No dashboards full of widgets.
+- **Low cognitive load.** Short labels, clear hierarchy, generous spacing. Never show more than one new concept at a time.
+- **Predictable UI.** Same layout, same button positions, same wording everywhere. No surprise modals, auto-advancing screens, or layout jumps. Every state change comes from the user's own action.
+- **Calm feedback.** No flashing, confetti, shaking, countdown pressure, or loud red error states. Mistakes are information, not failure. Use neutral wording like "Not quite. Want a hint?"
+- **Challenge, not busywork.** He is 2e: problems must be genuinely interesting at university level. Never pad the app with trivial drills.
+- **Mind-map pedagogy.** Problems link to topics and related problems (`related` ids). The UI can show where a problem sits in the topic map, so he can see how ideas connect.
+- **Interleaving + spaced repetition.** The next-problem picker mixes topics on purpose and brings back past mistakes at growing intervals. Explain this in one line in the UI so the order never feels random.
+- **Progressive hints.** Hints come one at a time, each a small step, and the full solution only appears on request. Asking for a hint is never penalised visibly.
+- **Time without pressure.** Track solving time for the memory system. Don't show a ticking timer by default.
+- **Respect for autonomy.** He can always skip, retry, or end a session. Settings stay minimal and are explained in plain words.
+
+## When unsure
+
+Choose the quieter, simpler, more predictable option. If a feature adds clutter, leave it out or put it behind one clearly labelled control.

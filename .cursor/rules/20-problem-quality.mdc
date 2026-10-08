@@ -1,0 +1,53 @@
+---
+description: Quality standard and data format for discrete-math problems (built-in bank and AI-generated)
+globs: src/bank/**, src/agent/**
+alwaysApply: false
+---
+
+# Problem quality standard
+
+## Level
+- **University level.** Think a first/second-year discrete math course for CS/math students. Not school exercises ("how many ways to arrange 3 books"), and not olympiad tricks that hinge on one obscure insight.
+- Each problem is **"to think about"**: it needs a real idea (a bijection, the right invariant, a clever partition, a recurrence), not just plugging into a formula.
+- The statement is precise and unambiguous. Define every object (labelled vs unlabelled, simple graph, ordered vs unordered, ranges of n).
+
+## Topics (`Topic` union)
+`combinatorics` · `graphs` · `logic` (propositional & predicate) · `sets` · `relations` (relations & orders) · `induction` · `recurrences` (incl. generating functions) · `boolean` (Boolean functions) · `number-theory` (basics for CS: modular arithmetic, gcd, CRT, Fermat/Euler) · `counting-principles` (pigeonhole, inclusion–exclusion).
+The bank must cover every topic. Target about 30 problems, at least 2 per topic, with most answers auto-checkable.
+
+## Required format (`src/bank/types.ts`)
+```ts
+export type AnswerType = 'numeric' | 'expression' | 'set' | 'proof';
+export interface Problem {
+  id: string;                 // '<topic-prefix>-<nnn>', e.g. 'comb-007'; stable, never reused
+  topic: Topic;
+  subtopics?: string[];
+  difficulty: 3 | 4 | 5;      // 3 = solid course exercise, 5 = hard exam problem
+  title: string;              // short, English
+  statement: string;          // markdown + KaTeX ($..$ / $$..$$)
+  hints: [string, string, string] | [string, string, string, string]; // progressive: nudge -> idea -> key step (-> near-solution)
+  solution: string;           // full worked solution, markdown + KaTeX
+  answer: {
+    type: AnswerType;
+    canonical?: number | string | Array<number | string>; // REQUIRED unless type === 'proof'
+    display: string;          // human-readable final answer (LaTeX ok)
+    keyPoints?: string[];     // REQUIRED for 'proof': claims a correct proof must establish
+  };
+  related?: string[];         // ids of related problems (mind-map links)
+  estMinutes?: number;
+}
+```
+- `numeric`: `canonical` is an exact integer or rational string (`"3/8"`). No floats unless unavoidable.
+- `expression`: `canonical` is a normalised expression in `n` (e.g. `"2^(n+1) - n - 2"`). The checker compares it to the user's input by evaluating both at several n.
+- `set`: `canonical` is an array. Order doesn't matter, duplicates aren't allowed.
+- Hints never reveal the final answer. Each hint is one step past the previous one.
+
+## Verification (mandatory)
+- **Every answer is verified independently** of the author's reasoning. Where possible this means a brute-force script in `scripts/verify/<id>.ts` (enumerate small cases, compare with `canonical`, or check the closed form for n = 0..10).
+- Proof problems get a check on small instances where feasible, plus a review of `keyPoints`.
+- A problem doesn't enter the bank until its verifier passes `npm run verify`.
+
+## AI-generated problems (`src/agent/**`)
+- The system prompt embeds this standard. The model must return **strict JSON** matching `Problem`, which is validated with a type guard and rejected or retried if invalid.
+- Mark AI problems `source: 'ai'` and treat them as unverified. Re-check numeric/expression answers where feasible (for example, ask the model for a small-case table and cross-check it).
+- Answer checking by the agent explains *why*, gently. It never just says "wrong".

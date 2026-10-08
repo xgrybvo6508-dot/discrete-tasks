@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+.cursor-runs/
+.env*
+!.env.example
+*.log
+.DS_Store
