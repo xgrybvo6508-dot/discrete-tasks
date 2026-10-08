@@ -39,6 +39,25 @@ export const TOPIC_PREFIXES: Readonly<Record<Topic, string>> = {
   'counting-principles': 'count',
 };
 
+export interface TopicPosition {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Stable positions in a 1000 by 620 topic-map view box. */
+export const TOPIC_POSITIONS: Readonly<Record<Topic, TopicPosition>> = {
+  combinatorics: { x: 180, y: 130 },
+  'counting-principles': { x: 500, y: 70 },
+  'number-theory': { x: 820, y: 130 },
+  recurrences: { x: 160, y: 340 },
+  induction: { x: 500, y: 290 },
+  graphs: { x: 800, y: 340 },
+  logic: { x: 170, y: 540 },
+  sets: { x: 390, y: 500 },
+  boolean: { x: 620, y: 540 },
+  relations: { x: 830, y: 520 },
+};
+
 /** Fixed edges of the topic mind map. */
 export const TOPIC_EDGES: readonly (readonly [Topic, Topic])[] = [
   ['combinatorics', 'counting-principles'],

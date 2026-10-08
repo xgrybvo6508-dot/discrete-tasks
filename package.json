@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "verify": "tsx scripts/verify/run-all.ts",
+    "verify:bank": "tsx scripts/verify/run-all.ts",
     "format": "prettier --write .",
     "e2e": "playwright test"
   },

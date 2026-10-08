@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isTopic, TOPIC_EDGES, TOPIC_LABELS, TOPIC_PREFIXES, TOPICS } from './topics';
+import {
+  isTopic,
+  TOPIC_EDGES,
+  TOPIC_LABELS,
+  TOPIC_POSITIONS,
+  TOPIC_PREFIXES,
+  TOPICS,
+} from './topics';
 import type { Topic } from './types';
 
 describe('topics', () => {
@@ -16,6 +23,16 @@ describe('topics', () => {
     expect(new Set(TOPICS.map((t) => TOPIC_PREFIXES[t])).size).toBe(TOPICS.length);
     expect(Object.keys(TOPIC_LABELS).sort()).toEqual([...TOPICS].sort());
     expect(Object.keys(TOPIC_PREFIXES).sort()).toEqual([...TOPICS].sort());
+  });
+
+  it('has a finite, distinct map position for every topic', () => {
+    const positions = TOPICS.map((topic) => TOPIC_POSITIONS[topic]);
+    expect(Object.keys(TOPIC_POSITIONS).sort()).toEqual([...TOPICS].sort());
+    for (const position of positions) {
+      expect(Number.isFinite(position.x)).toBe(true);
+      expect(Number.isFinite(position.y)).toBe(true);
+    }
+    expect(new Set(positions.map(({ x, y }) => `${x},${y}`)).size).toBe(TOPICS.length);
   });
 
   it('mind-map edges join known, distinct topics and connect every topic', () => {

@@ -18,8 +18,18 @@ The bank must cover every topic. Target about 30 problems, at least 2 per topic,
 ## Required format (`src/bank/types.ts`)
 ```ts
 export type AnswerType = 'numeric' | 'expression' | 'set' | 'proof';
+export interface Answer {
+  type: AnswerType;
+  canonical?: number | string | Array<number | string>; // required unless 'proof'
+  display: string;          // human-readable final answer (LaTeX allowed)
+  accepted?: string[];      // extra accepted inputs; set aliases use "alias=item"
+  tolerance?: number;       // numeric only, for genuinely non-rational answers
+  nRange?: [number, number]; // expression only; default [1, 10]
+  keyPoints?: string[];     // required for 'proof'
+}
 export interface Problem {
   id: string;                 // '<topic-prefix>-<nnn>', e.g. 'comb-007'; stable, never reused
+  source: 'bank' | 'ai';
   topic: Topic;
   subtopics?: string[];
   difficulty: 3 | 4 | 5;      // 3 = solid course exercise, 5 = hard exam problem
@@ -27,12 +37,7 @@ export interface Problem {
   statement: string;          // markdown + KaTeX ($..$ / $$..$$)
   hints: [string, string, string] | [string, string, string, string]; // progressive: nudge -> idea -> key step (-> near-solution)
   solution: string;           // full worked solution, markdown + KaTeX
-  answer: {
-    type: AnswerType;
-    canonical?: number | string | Array<number | string>; // REQUIRED unless type === 'proof'
-    display: string;          // human-readable final answer (LaTeX ok)
-    keyPoints?: string[];     // REQUIRED for 'proof': claims a correct proof must establish
-  };
+  answer: Answer;
   related?: string[];         // ids of related problems (mind-map links)
   estMinutes?: number;
 }
