@@ -1,0 +1,11 @@
+dist/
+coverage/
+node_modules/
+dev-dist/
+test-results/
+playwright-report/
+package-lock.json
+.cursor-runs/
+PLAN.md
+AGENTS.md
+.cursor/

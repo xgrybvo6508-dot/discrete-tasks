@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      The Content-Security-Policy <meta> is added at build time by the CSP plugin in
+      vite.config.ts (the dev server needs inline styles, so it is build-only).
+      connect-src allows https: because the agent API origin is chosen by the user in
+      Settings at runtime. No other third-party origin is ever allowed.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0e0f13" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Discrete Tasks</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>Discrete Tasks needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
